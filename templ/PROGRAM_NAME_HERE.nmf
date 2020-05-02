@@ -1,0 +1,6 @@
+{
+  "program": {
+    "x86-64": {"url": "PROGRAM_NAME_HERE64.nexe"},
+    "x86-32": {"url": "PROGRAM_NAME_HERE32.nexe"}
+  }
+}

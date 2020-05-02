@@ -1,0 +1,180 @@
+/*
+Copyright (C) 2013 Christopher A. Greeley
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+#include "Compile.h"
+
+void Compile( bool nacl, bool package, bool ucpp, bool webGenerate,
+                std::string naclArguments, std::string toolChain, std::vector< std::string > files, std::string output )
+{
+
+    //Execute any external toolchains the user may want to use.//
+    system( toolChain.c_str() );
+
+    //Compile .ucpp files (unless told not to by the user.//
+    if( ucpp == true )
+    {
+        std::stringstream ucppExec;
+        ucppExec << "UCPP" << INTERNAL_EXEC_CONVENTION;
+        //Find all the .ucpp files and compile them.//
+        for( UINT i = 0; i < files.size(); ++i )
+        {
+            //Make sure a file name is big enough to be tested if it is a ucpp file.//
+            if( files[ i ].size() >= 5 )
+            {
+                //Check if the file is a .ucpp file so it can be compiled.//
+                if( files[ i ].substr( ( files[ i ].size() - 5 ), 5 ).compare( ".ucpp" ) == 0 )
+                {
+                    std::stringstream commandBuffer;
+                    commandBuffer << "./" << ucppExec.str() << " " << files[ i ];
+                    system( commandBuffer.str().c_str() );
+                    //Make the new file name (.cpp the compiled .ucpp file).//
+                    files[ i ] = files[ i ].replace( ( files[ i ].end() - 5 ), files[ i ].end(), std::string{ ".cpp" } );
+                }
+            }
+        }
+    }
+    if( nacl == true && package == false )
+    {
+        std::string outputs[ AMOUNT_OF_TOOLS ];
+        std::stringstream commandBuffers[ AMOUNT_OF_TOOLS ];
+        //What bits do we compile for? We need the respective outputs of those platforms.//
+        for( UINT i = 0; i < AMOUNT_OF_TOOLS; ++i )
+        {
+            std::stringstream out;
+            out << output << BITS[ i ];
+            outputs[ i ] = out.str();
+        }
+        //All toolchains will have these.//
+        for( UINT i = 0; i < AMOUNT_OF_TOOLS; ++i )
+            commandBuffers[ i ] << ReadInfo() << TOOLS[ i ] << " ";
+        //Add the files that will be compiled.//
+        for( UINT i = 0; i < AMOUNT_OF_TOOLS; ++i )
+        {
+            for( UINT j = 0; j < files.size(); ++j )
+            {
+                if( files[ j ].size() >= 4 ) {
+                    if( files[ j ].substr( ( files[ j ].size() - 4 ), 4 ).compare( std::string{ "32.s" } ) == 0  && i == 1 )
+                        commandBuffers[ i ] << " " << files[ j ] << " ";
+                }
+                if( files[ j ].size() >= 2 ) {
+                    if( files[ j ].substr( ( files[ j ].size() - 2 ), 2 ).compare( std::string{ ".h" } ) != 0 &&
+                            files[ j ].substr( ( files[ j ].size() - 2 ), 2 ).compare( std::string{ ".s" } ) != 0)
+                        commandBuffers[ i ] << " " << files[ j ] << " ";
+                }
+            }
+        }
+        //Finish forming the command with platform specifics.//
+        for( UINT i = 0; i < AMOUNT_OF_TOOLS; ++i )
+            commandBuffers[ i ] << " -g -lppapi_cpp -lppapi " << naclArguments << " -m" << BITS[ i ] << " -o" << outputs[ i ] << ".nexe";
+        //Execute!//
+        for( UINT i = 0; i < AMOUNT_OF_TOOLS; ++i )
+            system( commandBuffers[ i ].str().c_str() );
+    }
+    else if( nacl == true && package == true )
+    {
+        std::ofstream fi;
+        std::stringstream fiFileName;
+        std::stringstream directory;
+        std::stringstream plgBuffer;
+        std::stringstream makeDirectory;
+        plgBuffer << ReadInfo() << "../../../../../bin/" << "PortableLibraryGenerator" << INTERNAL_EXEC_CONVENTION << " ";
+        //Add the files that will be compiled.//
+        for( UINT i = 0; i < files.size(); ++i )
+        {
+            if( files[ i ].size() >= 2 ) {
+                if( files[ i ].substr( ( files[ i ].size() - 2 ), 2 ).compare( std::string{ ".h" } ) != 0 )
+                    plgBuffer << " " << files[ i ] << " ";
+            }
+        }
+        //Compile the packaged library.//
+        system( plgBuffer.str().c_str() );
+        //Make the directory *cough* package *cough*.//
+        makeDirectory << "mkdir " << output;
+        system( makeDirectory.str().c_str() );
+        directory << output << "/";
+        fiFileName << directory.str() << "fi.pi";
+        //So fi.pi, can be written.//
+        fi.open( fiFileName.str().c_str() );
+        #ifdef GNU_LINUX
+                //Move all the files into the "Package" folder.//
+                for( UINT i = 0; i < files.size(); ++i )
+                {
+                    if( files[ i ].size() >= 2 && files[ i ].size() >= 4 )
+                    {
+                        if( files[ i ].substr( ( files[ i ].size() - 2 ), 2 ).compare( std::string{ ".h" } ) != 0 )
+                        {
+                            //Move the executibles for all platforms.//
+                            for( UINT j = 0; j < AMOUNT_OF_TOOLS; ++j )
+                            {
+                                std::stringstream end;
+                                std::stringstream command;
+                                std::string newName;
+                                end << BITS[ j ] << ".s";
+                                newName = files[ i ].replace( ( files[ i ].end() - 4 ), files[ i ].end(), end.str() );
+                                fi << newName << "\n";
+                                command << "mv " << newName << " " << output << "/" << newName;
+                                system( command.str().c_str() );
+                            }
+                        }
+                    }
+                }
+        #endif
+        #ifdef MAC_OSX
+                //Move all the files into the "Package" folder.//
+                for( UINT i = 0; i < files.size(); ++i )
+                {
+                    if( files[ i ].size() >= 2 && files[ i ].size() >= 4 )
+                    {
+                        if( files[ i ].substr( ( files[ i ].size() - 2 ), 2 ).compare( std::string{ ".h" } ) != 0 )
+                        {
+                            //Move the executibles for all platforms.//
+                            for( UINT j = 0; j < AMOUNT_OF_TOOLS; ++j )
+                            {
+                                std::stringstream end;
+                                std::stringstream command;
+                                std::string newName;
+                                end << BITS[ j ] << ".s";
+                                newName = files[ i ].replace( ( files[ i ].end() - 4 ), files[ i ].end(), end.str() );
+                                fi << newName << "\n";
+                                command << "mv " << newName << " " << output << "/" << newName;
+                                system( command.str().c_str() );
+                            }
+                        }
+                    }
+                }
+        #endif
+        fi.close();
+    }
+    if( webGenerate == true && package == false )
+    {
+        std::stringstream webGenerateBuffer;
+        webGenerateBuffer << ReadInfo() << "../../../../../bin/" << "WebGen" << INTERNAL_EXEC_CONVENTION << " " << output << " -r" << ReadInfo() << "../../../../../templ/PROGRAM_NAME_HERE.html -r" << ReadInfo() << "../../../../../templ/PROGRAM_NAME_HERE.nmf";
+        system( webGenerateBuffer.str().c_str() );
+        webGenerateBuffer.str( std::string{} );
+        webGenerateBuffer << ReadInfo() << "../../../../../bin/" << "WebGen" << INTERNAL_EXEC_CONVENTION << " " << output << " " << ReadInfo() << "../../../../../templ/implem.js";
+        system( webGenerateBuffer.str().c_str() );
+        webGenerateBuffer.str( std::string{} );
+        webGenerateBuffer << ReadInfo() << "../../../../../bin/" << "WebGen" << INTERNAL_EXEC_CONVENTION << " " << output << " " <<  ReadInfo() << "../../../../../templ/setup.js";
+        system( webGenerateBuffer.str().c_str() );
+        webGenerateBuffer.str( std::string{} );
+        webGenerateBuffer << ReadInfo() << "../../../../../bin/" << "WebGen" << INTERNAL_EXEC_CONVENTION << " " << output << " " <<  ReadInfo() << "../../../../../templ/main.js";
+        system( webGenerateBuffer.str().c_str() );
+        webGenerateBuffer.str( std::string{} );
+        webGenerateBuffer << ReadInfo() << "../../../../../bin/" << "WebGen" << INTERNAL_EXEC_CONVENTION << " " << output << " " <<  ReadInfo() << "../../../../../templ/manifest.json";
+        system( webGenerateBuffer.str().c_str() );
+        webGenerateBuffer.str( std::string{} );
+
+    }
+}
+
+

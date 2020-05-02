@@ -1,0 +1,14 @@
+{
+  "name": "PROGRAM_NAME_HERE",
+  "manifest_version": 2,
+  "description": "PROGRAM_NAME_HERE",
+  "version": "0.1",
+  "app": {
+    "background": {
+      "scripts": ["main.js"]
+    }
+  }
+}
+
+
+

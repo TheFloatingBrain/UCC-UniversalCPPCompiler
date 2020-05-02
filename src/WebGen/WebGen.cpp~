@@ -1,0 +1,112 @@
+/*  Copyright (C) 2013 Dakota Draheim
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+    documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+    and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+    TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+    CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+    IN THE SOFTWARE.
+
+*/
+
+//#define WINDOWS
+#define MAC_OSX
+//#define GNU_LINUX
+#include<iostream>
+#include<fstream>
+#include<sstream>
+#include<string>
+#include <cstdlib>
+#ifdef WINDOWS
+    const std::string RENAME="ren ";
+#endif
+#ifdef MAC_OSX
+    const std::string RENAME="mv ";
+#endif
+#ifdef GNU_LINUX
+    const std::string RENAME="rename ";
+#endif
+void DoOp(std::string progname,std::string filename);
+int main(int argc,char **args)
+{
+    for(int i=2;i<argc;++i)
+    {
+        DoOp(std::string(args[1]),std::string(args[i]));
+    }
+    return 0;
+}
+void DoOp(std::string progname,std::string filename)
+{
+    bool rename=false;
+    if(filename.substr(0,2).compare("-r")==0)
+    {
+        rename=true;
+        filename=filename.replace(filename.begin(),filename.begin()+2,"");
+    }
+    if(filename.substr(0,2).compare("-r")==0)
+    {
+        rename=true;
+        filename=filename.replace(filename.begin(),filename.begin()+2,"");
+    }
+    std::ifstream in;
+    std::ofstream out;
+    std::string marker="PROGRAM_NAME_HERE";
+    std::stringstream buffer;
+    std::string line, data;
+    in.open(filename.c_str());
+    if(in.good()==true)
+    {
+        while(in.eof()==false)
+        {
+            std::getline(in,line);
+            buffer<<line<<"\n";
+        }
+    }
+    in.close();
+    data = buffer.str();
+    for( unsigned int i = 0; i < data.size(); ++i )
+    {
+        if(data.substr(i,marker.size())==marker)
+        {
+            data = data.replace(data.begin()+i,data.begin()+i+marker.size(),progname);
+        }
+    }
+    std::stringstream outFileName;
+    if(rename==true)
+    {
+        unsigned int i;
+        for(i = filename.size()-1;i>=0;--i)
+        {
+            if(filename[i]=='.')
+            {
+                break;
+            }
+        }
+        outFileName<<progname<<filename.substr(i,(filename.size())-i);
+    }
+    else
+    {
+        std::string filenameNoDir;
+        for(unsigned int j=filename.size();j>=0;--j)
+        {
+            if(filename[j]=='/')
+            {
+                filenameNoDir=filename.substr((j+1),(filename.size()-1));
+                break;
+            }
+        }
+        outFileName<<filenameNoDir;
+    }
+    out.open(outFileName.str().c_str());
+    for(unsigned int j=0;j<data.size();++j)
+    {
+        out<<data[j];
+    }
+    out.close();
+}
