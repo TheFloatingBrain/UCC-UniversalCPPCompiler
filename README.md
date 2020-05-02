@@ -1,4 +1,4 @@
-Originally created in 2013
+Originally created in 2013, directory can be set in naclInfo.txt
 
 # Universal C++ Language Compiler: 
 Universal C++ is standard C++11/14 with the addition of the "borrow" and "repl" keywords. "borrow" automatically deletes memory allocated in the same scope or within a class after it was allocated. Almost a garbage collector, further work would have had to been done to make a "compile time garbage collector". "repl" was a keyword for an explicit optimization, replace the name of one variable with another. That way the variable can continued to be used under a different name, allowing for clean code, an understanding of what happened and guaranteed efficiency. (Neither of these were particularly good, borrow could have been if it were further developed). Universal C++ takes Universal C++ code as input and outputs ISO Standard C++ code and is built on top of ISO Standard C++. That way it is totally platform independent, and standard C++ tools: gcc, clang, google native client, msvc could continued to be used.
